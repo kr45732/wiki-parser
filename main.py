@@ -62,7 +62,8 @@ def fetch_dungeon_loot():
                     attr_value = param.value.nodes[0].strip()
                     if attr_name == "item":
                         if item is None:
-                            item = attr_value
+                            item = attr_value.replace("Ultimate_Jerry", "Ultimate Jerry").replace(
+                                "One For All", "One For All I")
                     elif attr_name == "chest":
                         chest = attr_value
                     elif attr_name == "cost":
