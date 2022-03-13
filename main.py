@@ -40,6 +40,17 @@ class ObjectEncoder(json.JSONEncoder):
         return super().default(o)
 
 
+def romanToInt(num):
+    roman_numerals = {'I': 1, 'V': 5, 'X': 10}
+    result = 0
+    for i, c in enumerate(num):
+        if (i+1) == len(num) or roman_numerals[c] >= roman_numerals[num[i+1]]:
+            result += roman_numerals[c]
+        else:
+            result -= roman_numerals[c]
+    return result
+
+
 def fetch_dungeon_loot():
     titles = [f"Template:Catacombs Floor {f} Loot" for f in [
         "I", "II", "III", "IV", "V", "VI", "VII"]]
@@ -68,8 +79,8 @@ def fetch_dungeon_loot():
                                 item = "Ultimate " + item
                             elif item.startswith("Master Skull - Tier "):
                                 item = "Master Skull - Tier " + \
-                                    str(item.split(
-                                        "Master Skull - Tier ")[1].count("I"))
+                                    str(romanToInt(item.split(
+                                        "Master Skull - Tier ")[1]))
                             elif item.endswith(" Pet"):
                                 item = item.split(" Pet")[0]
                     elif attr_name == "chest":
