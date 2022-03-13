@@ -62,8 +62,16 @@ def fetch_dungeon_loot():
                     attr_value = param.value.nodes[0].strip()
                     if attr_name == "item":
                         if item is None:
-                            item = attr_value.replace("Ultimate_Jerry", "Ultimate Jerry").replace(
-                                "One For All", "One For All I")
+                            item = attr_value.replace("Ultimate_Jerry", "Ultimate Jerry").replace("Ultimate One For All", "One For All").replace(
+                                "One For All", "One For All I").replace("’", "'")
+                            if item.startswith("Wise "):
+                                item = "Ultimate " + item
+                            elif item.startswith("Master Skull - Tier "):
+                                item = "Master Skull - Tier " + \
+                                    str(item.split(
+                                        "Master Skull - Tier ")[1].count("I"))
+                            elif item.endswith(" Pet"):
+                                item = item.split(" Pet")[0]
                     elif attr_name == "chest":
                         chest = attr_value
                     elif attr_name == "cost":
@@ -148,4 +156,4 @@ def activate_job():
     thread.start()
 
 
-app.run(host="0.0.0.0", port=8080)
+app.run(host="0.0.0.0", port=8081)
