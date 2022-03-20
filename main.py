@@ -1,3 +1,5 @@
+from ctypes import cast
+from multiprocessing.sharedctypes import Value
 from flask import Flask, request
 import dataclasses
 import json
@@ -5,6 +7,7 @@ from typing import Any
 import urllib.parse
 import requests
 import mwparserfromhell
+from mwparserfromhell.nodes import Wikilink, Text
 import time
 import threading
 
@@ -77,10 +80,6 @@ def fetch_dungeon_loot():
                                 "One For All", "One For All I").replace("’", "'")
                             if item.startswith("Wise "):
                                 item = "Ultimate " + item
-                            elif item.startswith("Master Skull - Tier "):
-                                item = "Master Skull - Tier " + \
-                                    str(romanToInt(item.split(
-                                        "Master Skull - Tier ")[1]))
                             elif item.endswith(" Pet"):
                                 item = item.split(" Pet")[0]
                     elif attr_name == "chest":
@@ -110,6 +109,33 @@ def fetch_dungeon_loot():
     return items
 
 
+def fetch_dragon_loot():
+    titles = [f"Template:Dragon loot tables {f}" for f in [
+        "superior", "strong", "unstable", "young", "wise", "old", "protector"]]
+    items = {}
+    for title, dragon in get_wiki_sources_by_title(*titles).items():
+        cur_floor = {}
+        cur_name = ""
+        cur_item = {}
+        for template in dragon.nodes:
+            if type(template) == Wikilink:
+                if not template.title.startswith("File"):
+                    if cur_item != {}:
+                        cur_floor[cur_name] = cur_item
+                    cur_name = template.title.strip()
+                    cur_item = {"unique": False}
+            elif type(template) == Text:
+                if template.value.strip() == "Unique":
+                    cur_item["unique"] = True
+                else:
+                    try:
+                        cur_item["quality"] = int(template.strip())
+                    except ValueError:
+                        pass
+        items[title.split("tables ")[1]] = cur_floor
+    return items
+
+
 def get_wiki_sources_by_title(*page_titles: str, wiki_host: str = "wiki.hypixel.net"):
     prepared_titles = "|".join(map(urllib.parse.quote, page_titles))
     api_data = requests.get(
@@ -125,9 +151,15 @@ def get_wiki_sources_by_title(*page_titles: str, wiki_host: str = "wiki.hypixel.
 
 
 def update_data():
-    data = fetch_dungeon_loot()
-    with open("data.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4, cls=ObjectEncoder)
+    dungeon_loot_data = fetch_dungeon_loot()
+    with open("dungeon_loot.json", "w", encoding="utf-8") as f:
+        json.dump(dungeon_loot_data, f, ensure_ascii=False,
+                  indent=4, cls=ObjectEncoder)
+
+    dragon_loot_data = fetch_dragon_loot()
+    with open("dragon_loot.json", "w", encoding="utf-8") as f:
+        json.dump(dragon_loot_data, f, ensure_ascii=False,
+                  indent=4, cls=ObjectEncoder)
 
 
 app = Flask("app")
@@ -138,8 +170,8 @@ def home():
     return {"deez": "nuts"}
 
 
-@app.route("/data")
-def data():
+@app.route("/dungeon_loot")
+def dungeon_loot():
     args = request.args
 
     floor = 0
@@ -152,6 +184,12 @@ def data():
 
     with open("data.json") as file:
         return json.load(file)[str(floor)]
+
+
+@app.route("/dragon_loot")
+def dragon_loot():
+    with open("dragon_loot.json") as file:
+        return json.load(file)
 
 
 @app.before_first_request

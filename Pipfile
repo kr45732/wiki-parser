@@ -10,3 +10,4 @@ mwparserfromhell = "*"
 
 [dev-packages]
 mypy = "*"
+autopep8 = "*"
