@@ -182,7 +182,7 @@ def dungeon_loot():
     if floor < 1 or floor > 14:
         return {"cause": "Invalid"}
 
-    with open("data.json") as file:
+    with open("dungeon_loot.json") as file:
         return json.load(file)[str(floor)]
 
 
