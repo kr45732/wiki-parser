@@ -1,5 +1,4 @@
-from ctypes import cast
-from multiprocessing.sharedctypes import Value
+from werkzeug.exceptions import BadRequestKeyError
 from flask import Flask, request
 import dataclasses
 import json
@@ -7,7 +6,7 @@ from typing import Any
 import urllib.parse
 import requests
 import mwparserfromhell
-from mwparserfromhell.nodes import Wikilink, Text
+from mwparserfromhell.nodes import Wikilink, Text, Template
 import time
 import threading
 
@@ -76,8 +75,8 @@ def fetch_dungeon_loot():
                     attr_value = param.value.nodes[0].strip()
                     if attr_name == "item":
                         if item is None:
-                            item = attr_value.replace("Ultimate_Jerry", "Ultimate Jerry").replace("Ultimate One For All", "One For All").replace(
-                                "One For All", "One For All I").replace("’", "'")
+                            item = attr_value.replace(
+                                "Ultimate_Jerry", "Ultimate Jerry").replace("’", "'")
                             if item.startswith("Wise "):
                                 item = "Ultimate " + item
                             elif item.endswith(" Pet"):
@@ -117,13 +116,21 @@ def fetch_dragon_loot():
         cur_floor = {}
         cur_name = ""
         cur_item = {}
-        for template in dragon.nodes:
+        for counter, template in enumerate(dragon.nodes):
             if type(template) == Wikilink:
                 if not template.title.startswith("File"):
                     if cur_item != {}:
                         cur_floor[cur_name] = cur_item
                     cur_name = template.title.strip()
-                    cur_item = {"unique": False}
+                    if dragon.nodes[counter-2] == "{{Legendary}}":
+                        cur_name = f"Legendary {cur_name}"
+                    elif dragon.nodes[counter-2] == "{{Epic}}":
+                        cur_name = f"Epic {cur_name}"
+                    if cur_name.endswith(" Pet"):
+                        cur_name = cur_name.split(" Pet")[0]
+                    cur_item = {}
+                elif template.title.startswith("File:SkyBlock items summoning eye.png"):
+                    cur_item["eye"] = True
             elif type(template) == Text:
                 if template.value.strip() == "Unique":
                     cur_item["unique"] = True
@@ -132,6 +139,9 @@ def fetch_dragon_loot():
                         cur_item["quality"] = int(template.strip())
                     except ValueError:
                         pass
+            elif type(template) == Template:
+                if len(template.params) == 2 and template.params[0] == "green":
+                    cur_item["drop_chance"] = template.params[1].value.strip()
         items[title.split("tables ")[1]] = cur_floor
     return items
 
@@ -177,7 +187,7 @@ def dungeon_loot():
     floor = 0
     try:
         floor = int(args["floor"])
-    except ValueError:
+    except (ValueError, BadRequestKeyError):
         pass
     if floor < 1 or floor > 14:
         return {"cause": "Invalid"}
