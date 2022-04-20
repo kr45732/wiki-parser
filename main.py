@@ -99,6 +99,8 @@ def fetch_dungeon_loot():
                         defaults = default_chest_costs[chest]
                         cost = defaults[min(
                             f for f in defaults.keys() if f >= (ifloor-7 if title.endswith("Master") else ifloor))]
+                    if item == "Spirit Wing":
+                        cost = 2000000
 
                     if(chest not in floor_data.keys()):
                         floor_data[chest] = []
